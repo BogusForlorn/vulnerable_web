@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PenAI Test App</title>
+</head>
+<body>
+  <h1>Welcome to the PenAI Vulnerable App</h1>
+  {% if session['username'] %}
+    <p>Logged in as: {{ session['username'] }}</p>
+    <p><a href="/logout">Logout</a></p>
+  {% else %}
+    <p><a href="/login">Login</a></p>
+  {% endif %}
+
+  <h2>Comments</h2>
+  <form action="/comment" method="POST">
+    <textarea name="content" rows="4" cols="50" placeholder="Leave a comment"></textarea><br>
+    <button type="submit">Submit Comment</button>
+  </form>
+
+  <h3>All Comments</h3>
+  <ul>
+    {% for comment in comments %}
+      <li>{{ comment[0]|safe }}</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>
+
