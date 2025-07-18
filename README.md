@@ -4,11 +4,11 @@ pip install gunicorn flask --break-system-packages #remove --break-system-packag
 python setup.py #setup the db
 
 #use gunicorn to run the server
-gunicorn -w 4 -b 0.0.0.0:5000 vuln_app:app
+gunicorn -w 4 -b <your_ip_address>:5000 vuln_app:app
 ```
 To reset the DB after hammering it with PenAI.py, do 
 ```
 python reset.py #cleans up the db
 #then rerun the server with gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 vuln_app:app
+gunicorn -w 4 -b <your_ip_address>:5000 vuln_app:app
 ```
