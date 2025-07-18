@@ -9,9 +9,6 @@ app.secret_key = 'super-secret-key'
 
 DATABASE = 'app.db'
 
-# -----------------------------
-# DB Setup
-# -----------------------------
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -42,13 +39,9 @@ def init_db():
                 content TEXT NOT NULL
             )
         ''')
-        c.execute("INSERT INTO users (username, password) VALUES ('admin', 'admin123')")
+        c.execute("INSERT INTO users (username, password) VALUES ('admin', 'buckaroo')")
         conn.commit()
     print("[+] Database initialized.")
-
-# -----------------------------
-# Routes
-# -----------------------------
 
 @app.route('/')
 def index():
@@ -81,7 +74,7 @@ def login():
 @app.route('/comment', methods=['GET', 'POST'])
 def comment():
     if request.method == 'POST':
-        content = request.form['content']  # No sanitization
+        content = request.form['content']  
         db = get_db()
         c = db.cursor()
         c.execute("INSERT INTO comments (content) VALUES (?)", (content,))
@@ -94,9 +87,6 @@ def logout():
     session.pop('username', None)
     return redirect('/')
 
-# -----------------------------
-# New vulnerable directories
-# -----------------------------
 @app.route('/admin-panel')
 def admin_panel():
     return """
@@ -113,14 +103,11 @@ def hidden_backup():
     <pre>
     [backup]
     admin_user=admin
-    admin_pass=admin123
+    admin_pass=buckaroo
     db_backup_key=12345
     </pre>
     """
 
-# -----------------------------
-# Main
-# -----------------------------
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 
