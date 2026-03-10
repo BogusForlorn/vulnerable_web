@@ -8,10 +8,29 @@
   {% if session['username'] %}
     <p>Logged in as: {{ session['username'] }}</p>
     <p><a href="/logout">Logout</a></p>
+    
+    <h3>Update Bio (CSRF & SQLi)</h3>
+    <form action="/update-profile" method="POST">
+      <input type="text" name="bio" placeholder="New Bio"><br>
+      <button type="submit">Update Bio</button>
+    </form>
   {% else %}
     <p><a href="/login">Login</a></p>
   {% endif %}
 
+  <hr>
+  <h2>Testing Vulnerabilities</h2>
+  <ul>
+      <li><a href="/ping">Ping Tool (Command Injection)</a></li>
+      <li><a href="/fetch-url">URL Fetcher (SSRF)</a></li>
+      <li><a href="/view-file">File Viewer (Path Traversal)</a></li>
+      <li><a href="/debug-pickle">Pickle Debugger (Insecure Deserialization)</a></li>
+      <li><a href="/hello?name=World">Hello Page (SSTI)</a></li>
+      <li><a href="/admin-panel">Admin Panel (Broken Access Control)</a></li>
+      <li><a href="/hidden-backup">Hidden Backup</a></li>
+  </ul>
+
+  <hr>
   <h2>Comments</h2>
   <form action="/comment" method="POST">
     <textarea name="content" rows="4" cols="50" placeholder="Leave a comment"></textarea><br>
