@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Register - Borgor Science</title>
+</head>
+<body>
+  <h1>Create Kitchen Account</h1>
+  {% if error %}
+    <p style="color:red;">{{ error }}</p>
+  {% endif %}
+  <form action="/register" method="POST">
+    <label>Username:</label><br>
+    <input type="text" name="username" required><br>
+    <label>Password:</label><br>
+    <input type="password" name="password" required><br><br>
+
+    <h3>Your Burger Profile</h3>
+    <label>Burger Name:</label><br>
+    <input type="text" name="burger_name" placeholder="e.g. Midnight Crunch"><br>
+    <label>Bun Type:</label><br>
+    <input type="text" name="bun_type" placeholder="e.g. Brioche"><br>
+    <label>Patty Style:</label><br>
+    <input type="text" name="patty_style" placeholder="e.g. Double smash"><br>
+    <label>Toppings:</label><br>
+    <input type="text" name="toppings" placeholder="e.g. Jalapeno, cheddar, pickles"><br>
+    <label>Secret Sauce:</label><br>
+    <input type="text" name="secret_sauce" placeholder="e.g. Fire mayo"><br><br>
+
+    <button type="submit">Register Account</button>
+  </form>
+  <p><a href="/login">Already have an account? Login</a></p>
+  <p><a href="/">Back to Home</a></p>
+</body>
+</html>

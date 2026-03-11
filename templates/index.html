@@ -177,13 +177,17 @@
         <a href="/asset-viewer">Asset Explorer</a>
         <a href="/session-debug">Session Monitor</a>
         <a href="/profile">My Kitchen Profile</a>
-        {% if session['username'] == 'admin' %}
+        {% if session.get('username') %}
+            <a href="/view-burger-profile">View Burger Profile</a>
+        {% endif %}
+        {% if session.get('username') == 'admin' %}
             <a href="/kitchen-secrets">Vault</a>
         {% endif %}
-        {% if session['username'] %}
+        {% if session.get('username') %}
             <a href="/logout">Clock Out</a>
         {% else %}
             <a href="/login">Staff Login</a>
+            <a href="/register">Join Kitchen</a>
         {% endif %}
     </nav>
 
@@ -226,7 +230,7 @@
                 </section>
                 <section>
                     <h2>About the Architect</h2>
-                    <p>Current Status: {% if session['username'] %}Logged in as {{ session['username'] }}{% else %}Guest Chef{% endif %}</p>
+                    <p>Current Status: {% if session.get('username') %}Logged in as {{ session['username'] }}{% else %}Guest Chef{% endif %}</p>
                 </section>
             </div>
         </div>

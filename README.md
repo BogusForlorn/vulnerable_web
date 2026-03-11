@@ -23,6 +23,8 @@ To simulate a real-world environment, vulnerabilities are integrated into seemin
   - **Personalized Greetings:** Exploitable via the guest greeting generator (`/say-hello`).
 - **Broken Access Control:**
   - **Kitchen Secrets Vault:** Insecure access to the Senior Grill Architect vault (`/kitchen-secrets`).
+- **Insecure Direct Object Reference (IDOR):**
+  - **View Burger Profile:** Authenticated users are redirected to their own profile, but can enumerate `id` in `/view-burger-profile?id=<id>` to read other users' burger profiles.
 - **CVE-2025-50817 (Side-Loading):**
   - **Ingredient Sync:** Triggered via the `/sync-ingredients` route after uploading a malicious `test.py` through the Recipe Image Uploader.
 - **Cross-Site Request Forgery (CSRF):** Profile updates and kitchen notes lack CSRF protection.
@@ -39,6 +41,10 @@ python3 setup.py # Initializes the database with the Borgor Science schema
 ```bash
 python3 vuln_app.py
 ```
+
+### Create Test Accounts
+- Register at `/register` to create a user with a personalized burger profile.
+- Use `/view-burger-profile` while logged in to see your own profile first, then change `id` in the URL to validate IDOR behavior.
 
 ### Testing CVE-2025-50817
 A dedicated Proof of Concept script is provided:

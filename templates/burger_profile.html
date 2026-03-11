@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Burger Profile - Borgor Science</title>
+</head>
+<body>
+  <h1>Personalized Burger Profile</h1>
+  <p>Logged in as: <b>{{ current_username }}</b></p>
+
+  <form method="GET" action="/view-burger-profile">
+    <label>Profile ID:</label>
+    <input type="number" name="id" min="1" value="{{ profile[0] }}">
+    <button type="submit">View Profile</button>
+  </form>
+
+  <hr>
+  <p><b>Profile ID:</b> {{ profile[0] }}</p>
+  <p><b>Owner:</b> {{ profile[1] }}</p>
+  <p><b>Burger Name:</b> {{ profile[2] }}</p>
+  <p><b>Bun Type:</b> {{ profile[3] }}</p>
+  <p><b>Patty Style:</b> {{ profile[4] }}</p>
+  <p><b>Toppings:</b> {{ profile[5] }}</p>
+  <p><b>Secret Sauce:</b> {{ profile[6] }}</p>
+
+  <p><a href="/profile">Edit Kitchen Profile</a></p>
+  <p><a href="/">Back to Home</a></p>
+</body>
+</html>

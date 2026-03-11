@@ -58,7 +58,35 @@ def init_db():
                 value TEXT NOT NULL
             )
         ''')
+        c.execute('''
+            CREATE TABLE burger_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE NOT NULL,
+                burger_name TEXT NOT NULL,
+                bun_type TEXT NOT NULL,
+                patty_style TEXT NOT NULL,
+                toppings TEXT NOT NULL,
+                secret_sauce TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+        ''')
         c.execute("INSERT INTO users (username, password, bio) VALUES ('admin', 'buckaroo', 'The Boss.')")
+        admin_user_id = c.lastrowid
+        c.execute(
+            """
+            INSERT INTO burger_profiles
+            (user_id, burger_name, bun_type, patty_style, toppings, secret_sauce)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                admin_user_id,
+                "Admin Overdrive",
+                "Potato Bun",
+                "Smash Patty",
+                "Cheddar, Onion Jam, Pickles",
+                "Black Pepper Aioli",
+            ),
+        )
         c.execute("INSERT INTO secrets (key, value) VALUES ('flag', 'CTF{THIS_IS_A_SECRET_FLAG}')")
         conn.commit()
     print("[+] Database initialized.")
@@ -88,6 +116,52 @@ def login():
         else:
             error = 'Invalid credentials'
     return render_template('login.html', error=error)
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        burger_name = request.form.get('burger_name', '').strip()
+        bun_type = request.form.get('bun_type', '').strip()
+        patty_style = request.form.get('patty_style', '').strip()
+        toppings = request.form.get('toppings', '').strip()
+        secret_sauce = request.form.get('secret_sauce', '').strip()
+
+        if not username or not password:
+            error = 'Username and password are required'
+        else:
+            burger_name = burger_name or f"{username}'s Signature Stack"
+            bun_type = bun_type or 'Sesame Bun'
+            patty_style = patty_style or 'Classic Beef Patty'
+            toppings = toppings or 'Lettuce, Tomato, Onion'
+            secret_sauce = secret_sauce or 'House Sauce'
+
+            db = get_db()
+            c = db.cursor()
+            try:
+                c.execute(
+                    "INSERT INTO users (username, password, bio) VALUES (?, ?, ?)",
+                    (username, password, "No bio yet.")
+                )
+                user_id = c.lastrowid
+                c.execute(
+                    """
+                    INSERT INTO burger_profiles
+                    (user_id, burger_name, bun_type, patty_style, toppings, secret_sauce)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (user_id, burger_name, bun_type, patty_style, toppings, secret_sauce),
+                )
+                db.commit()
+                session['username'] = username
+                return redirect('/view-burger-profile')
+            except sqlite3.IntegrityError:
+                error = 'Username already exists'
+
+    return render_template('register.html', error=error)
 
 @app.route('/logout')
 def logout():
@@ -202,6 +276,48 @@ def profile():
     </form>
     <a href="/">Back</a>
     """
+
+
+@app.route('/view-burger-profile')
+def view_burger_profile():
+    if 'username' not in session:
+        return redirect('/login')
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, username FROM users WHERE username = ?", (session['username'],))
+    current_user = c.fetchone()
+
+    if not current_user:
+        return "Session user no longer exists. Please register again.<br><a href='/'>Back</a>", 404
+
+    requested_id = request.args.get('id', type=int)
+    if requested_id is None:
+        c.execute("SELECT id FROM burger_profiles WHERE user_id = ?", (current_user[0],))
+        own_profile = c.fetchone()
+        if not own_profile:
+            return "No burger profile found for this account.<br><a href='/'>Back</a>", 404
+        return redirect(f"/view-burger-profile?id={own_profile[0]}")
+
+    # Intentional IDOR vulnerability: no check that profile belongs to current_user.
+    c.execute(
+        """
+        SELECT bp.id, u.username, bp.burger_name, bp.bun_type, bp.patty_style, bp.toppings, bp.secret_sauce
+        FROM burger_profiles bp
+        JOIN users u ON u.id = bp.user_id
+        WHERE bp.id = ?
+        """,
+        (requested_id,),
+    )
+    profile = c.fetchone()
+    if not profile:
+        return "Burger profile not found.<br><a href='/'>Back</a>", 404
+
+    return render_template(
+        'burger_profile.html',
+        profile=profile,
+        current_username=current_user[1],
+    )
 
 # SSTI - Legitimate personalized greeting
 @app.route('/say-hello')
