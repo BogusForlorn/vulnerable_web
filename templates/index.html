@@ -1,50 +1,252 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>PenAI Test App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Borgor Science - Lead Grill Architect Blog</title>
+    <style>
+        :root {
+            --primary-brown: #8B4513;
+            --bg-yellow: #FFF9B8;
+            --box-bg: rgba(255, 255, 255, 0.9);
+            --accent-red: #D32F2F;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-yellow);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--primary-brown);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 60px 8vw;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .info-container {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            z-index: 10;
+        }
+
+        .card {
+            background-color: var(--box-bg);
+            padding: 30px;
+            border-radius: 30px; 
+            backdrop-filter: blur(5px);
+        }
+
+        .credentials {
+            text-align: right;
+        }
+
+        .credentials h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .credentials p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .main-identity h1 {
+            font-size: 4rem;
+            margin: 0;
+            line-height: 0.9;
+        }
+
+        nav {
+            padding: 20px 8vw;
+            background: var(--primary-brown);
+            color: white;
+            z-index: 10;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        main {
+            padding: 40px 8vw;
+            z-index: 10;
+            flex: 1;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 40px;
+        }
+
+        section {
+            background: var(--box-bg);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            border-bottom: 2px solid var(--primary-brown);
+            padding-bottom: 10px;
+        }
+
+        .comment-box {
+            margin-top: 20px;
+        }
+
+        textarea, input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+
+        button, input[type="submit"] {
+            background: var(--accent-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Burger Animation */
+        .burger {
+            position: fixed;
+            top: -20vh;
+            user-select: none;
+            z-index: 1;
+            animation: fall-diagonal linear forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fall-diagonal {
+            0% { opacity: 0; }
+            5% { opacity: 1; }
+            100% {
+                transform: translate(800px, 120vh) rotate(720deg);
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>Successful login! Welcome to the PenAI Vulnerable App</h1>
-  {% if session['username'] %}
-    <p>Logged in as: {{ session['username'] }}</p>
-    <p><a href="/logout">Logout</a></p>
-    
-    <h3>Update Bio (CSRF & SQLi)</h3>
-    <form action="/update-profile" method="POST">
-      <input type="text" name="bio" placeholder="New Bio"><br>
-      <button type="submit">Update Bio</button>
-    </form>
-  {% else %}
-    <p><a href="/login">Login</a></p>
-  {% endif %}
+    <header>
+        <div class="main-identity">
+            <h1>Borgor 🍔</h1>
+            <p>The Official Blog of the Lead Grill Architect</p>
+        </div>
+        <div class="info-container">
+            <div class="card credentials">
+                <h2>Qualifications</h2>
+                <p>Master of Borgor Science</p>
+                <p>Certified Bun Engineer (CBE)</p>
+                <p>PhD in Condiment Theory</p>
+            </div>
+        </div>
+    </header>
 
-  <hr>
-  <h2>Testing Vulnerabilities</h2>
-  <ul>
-      <li><a href="/ping">Ping Tool (Command Injection)</a></li>
-      <li><a href="/fetch-url">URL Fetcher (SSRF)</a></li>
-      <li><a href="/view-file">File Viewer (Path Traversal)</a></li>
-      <li><a href="/debug-pickle">Pickle Debugger (Insecure Deserialization)</a></li>
-      <li><a href="/hello?name=World">Hello Page (SSTI)</a></li>
-      <li><a href="/admin-panel">Admin Panel (Broken Access Control)</a></li>
-      <li><a href="/hidden-backup">Hidden Backup</a></li>
-      <li><a href="/upload">File Uploader (Used for Side-Loading CVE-2025-50817)</a></li>
-      <li><a href="/reload-future">Future Reloader (Trigger CVE-2025-50817)</a></li>
-  </ul>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/internal-network-test">Network Diagnostic</a>
+        <a href="/asset-viewer">Asset Explorer</a>
+        <a href="/session-debug">Session Monitor</a>
+        <a href="/profile">My Kitchen Profile</a>
+        {% if session['username'] == 'admin' %}
+            <a href="/kitchen-secrets">Vault</a>
+        {% endif %}
+        {% if session['username'] %}
+            <a href="/logout">Clock Out</a>
+        {% else %}
+            <a href="/login">Staff Login</a>
+        {% endif %}
+    </nav>
 
-  <hr>
-  <h2>Comments</h2>
-  <form action="/comment" method="POST">
-    <textarea name="content" rows="4" cols="50" placeholder="Leave a comment"></textarea><br>
-    <button type="submit">Submit Comment</button>
-  </form>
+    <main>
+        <div class="content-grid">
+            <div class="articles">
+                <section>
+                    <h2>Latest Research: The Thermodynamics of the Perfect Patty</h2>
+                    <p>Welcome to my professional portal. Here we discuss the advanced science of burger construction...</p>
+                    <form action="/say-hello">
+                        <input type="text" name="user" placeholder="Enter guest name for personalized greeting">
+                        <button type="submit">Generate Greeting</button>
+                    </form>
+                </section>
 
-  <h3>All Comments</h3>
-  <ul>
-    {% for comment in comments %}
-      <li>{{ comment[0]|safe }}</li>
-    {% endfor %}
-  </ul>
+                <section>
+                    <h2>Community Kitchen Notes</h2>
+                    <div class="comment-box">
+                        <form action="/submit-note" method="POST">
+                            <textarea name="note" rows="3" placeholder="Leave a culinary tip..."></textarea><br>
+                            <button type="submit">Post Note</button>
+                        </form>
+                    </div>
+                    <ul>
+                        {% for comment in comments %}
+                            <li>{{ comment[0]|safe }}</li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            </div>
+
+            <div class="sidebar">
+                <section>
+                    <h2>Toolbox</h2>
+                    <ul>
+                        <li><a href="/ping-service">Server Heartbeat</a></li>
+                        <li><a href="/upload-recipe">Upload Recipe Image</a></li>
+                        <li><a href="/sync-ingredients">Sync Local DB</a></li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>About the Architect</h2>
+                    <p>Current Status: {% if session['username'] %}Logged in as {{ session['username'] }}{% else %}Guest Chef{% endif %}</p>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function createBurger() {
+            const burger = document.createElement('div');
+            burger.classList.add('burger');
+            burger.innerText = '🍔';
+            const startPos = (Math.random() * 150) - 60;
+            burger.style.left = startPos + "vw";
+            const duration = Math.random() * 2 + 2; 
+            burger.style.animationDuration = duration + "s";
+            const size = Math.random() * 50 + 30;
+            burger.style.fontSize = size + "px";
+            document.body.appendChild(burger);
+            setTimeout(() => { burger.remove(); }, duration * 1000);
+        }
+        setInterval(createBurger, 200);
+    </script>
 </body>
 </html>
-

@@ -8,6 +8,7 @@ import requests
 import subprocess
 import pickle
 import base64
+import importlib
 import future.standard_library
 
 app = Flask(__name__)
@@ -29,7 +30,7 @@ def close_connection(exception):
 
 def init_db():
     if os.path.exists(DATABASE):
-        os.remove(DATABASE) # Always reset for this update
+        os.remove(DATABASE)
     with sqlite3.connect(DATABASE) as conn:
         c = conn.cursor()
         c.execute('''
@@ -64,9 +65,6 @@ def index():
     c = db.cursor()
     c.execute("SELECT content FROM comments")
     comments = c.fetchall()
-    
-    # CSRF Vulnerability: No token, and performs actions on behalf of user
-    # Also added links to new vulnerable features
     return render_template('index.html', comments=comments)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -75,14 +73,11 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        
-        # SQL Injection (Original)
+        # SQL Injection
         query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
-        print("[DEBUG] Executing:", query)
         c = get_db().cursor()
         c.execute(query)
         user = c.fetchone()
-        
         if user:
             session['username'] = username
             return redirect('/')
@@ -90,57 +85,57 @@ def login():
             error = 'Invalid credentials'
     return render_template('login.html', error=error)
 
-@app.route('/comment', methods=['POST'])
-def comment():
-    content = request.form.get('content', '')
-    db = get_db()
-    c = db.cursor()
-    # Stored XSS (Original)
-    c.execute("INSERT INTO comments (content) VALUES (?)", (content,))
-    db.commit()
-    return redirect('/')
-
 @app.route('/logout')
 def logout():
     session.pop('username', None)
     return redirect('/')
 
-# OS Command Injection
-@app.route('/ping', methods=['GET', 'POST'])
-def ping():
+# Stored XSS - Legitimate-looking comment feature
+@app.route('/submit-note', methods=['POST'])
+def submit_note():
+    content = request.form.get('note', '')
+    db = get_db()
+    c = db.cursor()
+    c.execute("INSERT INTO comments (content) VALUES (?)", (content,))
+    db.commit()
+    return redirect('/')
+
+# Command Injection - Legitimate-looking server health check
+@app.route('/ping-service', methods=['GET', 'POST'])
+def ping_service():
     result = ""
     if request.method == 'POST':
-        host = request.form.get('host', '')
-        # Vulnerable to command injection (e.g., host="8.8.8.8; ls -la")
-        command = f"ping -c 1 {host}"
+        endpoint = request.form.get('endpoint', '')
+        # Vulnerable to command injection
+        command = f"ping -c 1 {endpoint}"
         result = subprocess.getoutput(command)
     return f"""
-    <h1>Ping Tool</h1>
+    <h1>Kitchen Server Diagnostic</h1>
     <form method="POST">
-        Host: <input type="text" name="host">
-        <input type="submit" value="Ping">
+        Internal Node: <input type="text" name="endpoint" placeholder="e.g. 127.0.0.1">
+        <input type="submit" value="Check Health">
     </form>
     <pre>{result}</pre>
     <a href="/">Back</a>
     """
 
-# SSRF
-@app.route('/fetch-url', methods=['GET', 'POST'])
-def fetch_url():
+# SSRF - Legitimate-looking network test tool
+@app.route('/internal-network-test', methods=['GET', 'POST'])
+def network_test():
     content = ""
     if request.method == 'POST':
-        url = request.form.get('url', '')
+        node_url = request.form.get('node_url', '')
         try:
             # Vulnerable to SSRF
-            response = requests.get(url, timeout=5)
+            response = requests.get(node_url, timeout=5)
             content = response.text
         except Exception as e:
             content = str(e)
     return f"""
-    <h1>URL Fetcher</h1>
+    <h1>Node Communication Tester</h1>
     <form method="POST">
-        URL: <input type="text" name="url">
-        <input type="submit" value="Fetch">
+        Target Node URL: <input type="text" name="node_url" placeholder="http://internal-api:8080/status">
+        <input type="submit" value="Test Link">
     </form>
     <div style="border: 1px solid black; padding: 10px;">
         {content}
@@ -148,130 +143,120 @@ def fetch_url():
     <a href="/">Back</a>
     """
 
-# Path Traversal / LFI
-@app.route('/view-file')
-def view_file():
-    filename = request.args.get('file')
-    if not filename:
-        return "Usage: /view-file?file=filename<br><a href='/'>Back</a>"
+# Path Traversal / LFI - Legitimate-looking asset explorer
+@app.route('/asset-viewer')
+def asset_viewer():
+    path = request.args.get('path')
+    if not path:
+        return "Usage: /asset-viewer?path=assets/logo.png<br><a href='/'>Back</a>"
     try:
-        # Vulnerable to path traversal (e.g., file=../../../../etc/passwd)
-        # Note: In a real flask app, this is often done with send_from_directory incorrectly
-        with open(filename, 'r') as f:
+        # Vulnerable to path traversal
+        with open(path, 'r') as f:
             content = f.read()
-        return f"<h1>Viewing: {filename}</h1><pre>{content}</pre><br><a href='/'>Back</a>"
+        return f"<h1>Viewing Kitchen Asset: {path}</h1><pre>{content}</pre><br><a href='/'>Back</a>"
     except Exception as e:
-        return f"Error: {str(e)}<br><a href='/'>Back</a>"
+        return f"Error loading asset: {str(e)}<br><a href='/'>Back</a>"
 
-# Insecure Deserialization
-@app.route('/debug-pickle', methods=['GET', 'POST'])
-def debug_pickle():
-    data = request.args.get('data')
-    if data:
+# Insecure Deserialization - Legitimate-looking session monitor
+@app.route('/session-debug', methods=['GET', 'POST'])
+def session_debug():
+    token = request.args.get('token')
+    if token:
         try:
             # Vulnerable to insecure deserialization
-            decoded_data = base64.b64decode(data)
+            decoded_data = base64.b64decode(token)
+            # Ensure path includes current dir for CVE-2025-50817 side effect if needed
             obj = pickle.loads(decoded_data)
-            return f"Deserialized: {obj}<br><a href='/'>Back</a>"
+            return f"Session Context Decoded: {obj}<br><a href='/'>Back</a>"
         except Exception as e:
-            return f"Error: {str(e)}<br><a href='/'>Back</a>"
-    return "Provide base64 data to deserialize via 'data' parameter.<br><a href='/'>Back</a>"
+            return f"Error decoding token: {str(e)}<br><a href='/'>Back</a>"
+    return "Provide staff token for debug analysis.<br><a href='/'>Back</a>"
 
-# CSRF and SQL Injection
-@app.route('/update-profile', methods=['POST'])
-def update_profile():
+# CSRF and SQL Injection - Legitimate profile update
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
     if 'username' not in session:
         return redirect('/login')
     
-    # Vulnerable to CSRF (no token)
-    # Also vulnerable to SQL Injection in the bio field
-    new_bio = request.form.get('bio', '')
-    username = session['username']
-    
-    db = get_db()
-    c = db.cursor()
-    query = f"UPDATE users SET bio = '{new_bio}' WHERE username = '{username}'"
-    print("[DEBUG] Executing:", query)
-    c.execute(query)
-    db.commit()
-    return f"Profile updated to: {new_bio}<br><a href='/'>Back</a>"
-
-# Server-Side Template Injection (SSTI)
-@app.route('/hello')
-def hello():
-    name = request.args.get('name', 'Guest')
-    # Vulnerable to SSTI
-    template = f'<h1>Hello, {name}!</h1><a href="/">Back</a>'
-    return render_template_string(template)
-
-@app.route('/admin-panel')
-def admin_panel():
-    # Broken Access Control: only checks session, but maybe we can bypass it?
-    # Or maybe it's accessible if we know the URL (it is)
-    if session.get('username') != 'admin':
-        return "Access Denied. Only 'admin' can see this.<br><a href='/'>Back</a>", 403
-    
-    db = get_db()
-    c = db.cursor()
-    c.execute("SELECT * FROM secrets")
-    secrets = c.fetchall()
-    
-    return f"""
-    <h1>Admin Panel</h1>
-    <p>Welcome, admin! Here are the system secrets:</p>
-    <ul>
-        {"".join([f"<li>{s[1]}: {s[2]}</li>" for s in secrets])}
-    </ul>
-    <a href="/">Back</a>
-    """
-
-@app.route('/hidden-backup')
-def hidden_backup():
-    return """
-    <h1>Backup File</h1>
-    <p>Old credentials:</p>
-    <pre>
-    [backup]
-    admin_user=admin
-    admin_pass=buckaroo
-    db_backup_key=12345
-    </pre>
-    <a href="/">Back</a>
-    """
-
-import importlib
-
-# File Upload (Dangerous: can be used to exploit CVE-2025-50817)
-@app.route('/upload', methods=['GET', 'POST'])
-def upload():
-    message = ""
     if request.method == 'POST':
-        file = request.files.get('file')
-        if file:
-            # Dangerous: saves the file in the current directory
-            file.save(os.path.join(os.getcwd(), file.filename))
-            message = f"File {file.filename} uploaded successfully!"
+        # Vulnerable to CSRF and SQL Injection
+        new_bio = request.form.get('bio', '')
+        username = session['username']
+        db = get_db()
+        c = db.cursor()
+        query = f"UPDATE users SET bio = '{new_bio}' WHERE username = '{username}'"
+        c.execute(query)
+        db.commit()
+        return f"Kitchen Profile Updated!<br><a href='/'>Back</a>"
+    
     return f"""
-    <h1>File Uploader</h1>
-    <p>{message}</p>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="submit" value="Upload">
+    <h1>Kitchen Profile</h1>
+    <p>Logged in as: {session['username']}</p>
+    <form method="POST">
+        Update Kitchen Motto: <input type="text" name="bio">
+        <button type="submit">Update</button>
     </form>
     <a href="/">Back</a>
     """
 
-@app.route('/reload-future')
-def reload_future():
-    # To demonstrate CVE-2025-50817, we need to ensure 'test' is not in sys.modules
-    # so that the newly uploaded test.py is imported when future.standard_library is reloaded.
-    import sys
+# SSTI - Legitimate personalized greeting
+@app.route('/say-hello')
+def say_hello():
+    user = request.args.get('user', 'Chef')
+    # Vulnerable to SSTI
+    template = f'<h1>Greetings, {user}!</h1><p>Welcome to the grill room.</p><a href="/">Back</a>'
+    return render_template_string(template)
+
+# Broken Access Control - Legitimate-looking admin vault
+@app.route('/kitchen-secrets')
+def kitchen_secrets():
+    if session.get('username') != 'admin':
+        return "Access Denied. Only Senior Grill Architects can access the vault.<br><a href='/'>Back</a>", 403
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT * FROM secrets")
+    secrets = c.fetchall()
+    return f"""
+    <h1>Kitchen Secrets Vault</h1>
+    <ul>{"".join([f"<li>{s[1]}: {s[2]}</li>" for s in secrets])}</ul>
+    <a href="/">Back</a>
+    """
+
+# File Upload - Legitimate-looking recipe upload (Used for CVE-2025-50817)
+@app.route('/upload-recipe', methods=['GET', 'POST'])
+def upload_recipe():
+    message = ""
+    if request.method == 'POST':
+        recipe_file = request.files.get('recipe')
+        if recipe_file:
+            # DANGEROUS: Saves in CWD, enables CVE-2025-50817
+            recipe_file.save(os.path.join(os.getcwd(), recipe_file.filename))
+            message = f"Recipe {recipe_file.filename} uploaded to kitchen storage!"
+    return f"""
+    <h1>Recipe Image Uploader</h1>
+    <p style="color: green;">{message}</p>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="recipe">
+        <input type="submit" value="Upload to Storage">
+    </form>
+    <a href="/">Back</a>
+    """
+
+# Trigger for CVE-2025-50817 - Legitimate-looking ingredient sync
+@app.route('/sync-ingredients')
+def sync_ingredients():
+    # To demonstrate CVE-2025-50817 side-loading
     if 'test' in sys.modules:
         del sys.modules['test']
+    
+    # In vulnerable future==1.0.0, this import triggers 'import test'
+    # if it's in the CWD (since Flask adds CWD to sys.path)
     importlib.reload(future.standard_library)
-    return "Reloaded future.standard_library and attempted to trigger side-loading of 'test.py'."
+    
+    return "Ingredient database synchronized. (Standard library reloaded for compatibility check)."
 
 if __name__ == '__main__':
-    # init_db() # We can uncomment this if we want it to init on run
+    # Add CWD to sys.path to ensure test.py side-loading works as expected in local dev
+    if os.getcwd() not in sys.path:
+        sys.path.insert(0, os.getcwd())
     app.run(debug=True, host='0.0.0.0', port=5000)
-
