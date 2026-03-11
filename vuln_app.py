@@ -11,6 +11,10 @@ import base64
 import importlib
 import future.standard_library
 
+# Ensure current directory is in sys.path for CVE-2025-50817 side-loading
+if os.getcwd() not in sys.path:
+    sys.path.insert(0, os.getcwd())
+
 app = Flask(__name__)
 app.secret_key = 'super-secret-key'
 
@@ -243,20 +247,39 @@ def upload_recipe():
     """
 
 # Trigger for CVE-2025-50817 - Legitimate-looking ingredient sync
+
 @app.route('/sync-ingredients')
+
 def sync_ingredients():
+
     # To demonstrate CVE-2025-50817 side-loading
+
     if 'test' in sys.modules:
+
         del sys.modules['test']
+
     
+
     # In vulnerable future==1.0.0, this import triggers 'import test'
+
     # if it's in the CWD (since Flask adds CWD to sys.path)
+
     importlib.reload(future.standard_library)
+
     
-    return "Ingredient database synchronized. (Standard library reloaded for compatibility check)."
+
+    if 'test' in sys.modules:
+
+        return "Ingredient database synchronized. (Side-loaded module detected!)"
+
+    else:
+
+        return "Ingredient database synchronized. (Standard library reloaded)."
+
+
 
 if __name__ == '__main__':
-    # Add CWD to sys.path to ensure test.py side-loading works as expected in local dev
-    if os.getcwd() not in sys.path:
-        sys.path.insert(0, os.getcwd())
+
+    # init_db() # We can uncomment this if we want it to init on run
+
     app.run(debug=True, host='0.0.0.0', port=5000)
