@@ -20,6 +20,26 @@ app.secret_key = 'super-secret-key'
 
 DATABASE = 'app.db'
 
+
+def build_profile_token(profile_id):
+    payload = f"burger-profile:{profile_id}"
+    return base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+
+
+def parse_profile_token(token):
+    try:
+        padded = token + ("=" * (-len(token) % 4))
+        decoded = base64.urlsafe_b64decode(padded).decode()
+        if not decoded.startswith("burger-profile:"):
+            return None
+        profile_id = int(decoded.split(":", 1)[1])
+        if profile_id < 1:
+            return None
+        return profile_id
+    except Exception:
+        return None
+
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -291,13 +311,17 @@ def view_burger_profile():
     if not current_user:
         return "Session user no longer exists. Please register again.<br><a href='/'>Back</a>", 404
 
-    requested_id = request.args.get('id', type=int)
-    if requested_id is None:
+    profile_token = request.args.get('token', '').strip()
+    if not profile_token:
         c.execute("SELECT id FROM burger_profiles WHERE user_id = ?", (current_user[0],))
         own_profile = c.fetchone()
         if not own_profile:
             return "No burger profile found for this account.<br><a href='/'>Back</a>", 404
-        return redirect(f"/view-burger-profile?id={own_profile[0]}")
+        return redirect(f"/view-burger-profile?token={build_profile_token(own_profile[0])}")
+
+    requested_id = parse_profile_token(profile_token)
+    if requested_id is None:
+        return "Invalid burger profile token.<br><a href='/'>Back</a>", 400
 
     # Intentional IDOR vulnerability: no check that profile belongs to current_user.
     c.execute(
