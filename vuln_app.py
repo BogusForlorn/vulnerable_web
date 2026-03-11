@@ -7,6 +7,7 @@ import requests
 import subprocess
 import pickle
 import base64
+import future.standard_library
 
 app = Flask(__name__)
 app.secret_key = 'super-secret-key'
@@ -236,6 +237,34 @@ def hidden_backup():
     </pre>
     <a href="/">Back</a>
     """
+
+import importlib
+
+# File Upload (Dangerous: can be used to exploit CVE-2025-50817)
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+    message = ""
+    if request.method == 'POST':
+        file = request.files.get('file')
+        if file:
+            # Dangerous: saves the file in the current directory
+            file.save(os.path.join(os.getcwd(), file.filename))
+            message = f"File {file.filename} uploaded successfully!"
+    return f"""
+    <h1>File Uploader</h1>
+    <p>{message}</p>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="Upload">
+    </form>
+    <a href="/">Back</a>
+    """
+
+@app.route('/reload-future')
+def reload_future():
+    # To demonstrate CVE-2025-50817, we reload the module
+    importlib.reload(future.standard_library)
+    return "Reloaded future.standard_library and executed any side-loading payloads (if present)."
 
 if __name__ == '__main__':
     # init_db() # We can uncomment this if we want it to init on run
