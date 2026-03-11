@@ -1,38 +1,50 @@
-# PenAI Vulnerable Web Application
+# Borgor Science: Professional Grill Architect Portal
 
-This is a sample web application designed with various intentional vulnerabilities to test and evaluate automated security frameworks like PenAI.
+This is a professional-themed web application designed with various intentional vulnerabilities to test and evaluate automated security frameworks like **PenAI and other similar security frameworks**.
 
-## Existing Vulnerabilities
+## Platform Features & Hidden Vulnerabilities
 
-- **SQL Injection (SQLi):** Present in the login form and profile update bio field.
-- **Cross-Site Scripting (XSS):** Stored XSS in the comments section.
-- **OS Command Injection:** Exploitable via the Ping Tool (`/ping`).
-- **Server-Side Request Forgery (SSRF):** Exploitable via the URL Fetcher (`/fetch-url`).
-- **Path Traversal / Local File Inclusion (LFI):** Exploitable via the File Viewer (`/view-file`).
-- **Insecure Deserialization:** Exploitable via the Pickle Debugger (`/debug-pickle`).
-- **Server-Side Template Injection (SSTI):** Exploitable via the Hello Page (`/hello`).
-- **Broken Access Control:** Insecure admin panel at `/admin-panel` and hidden backups at `/hidden-backup`.
-- **Cross-Site Request Forgery (CSRF):** Profile updates and comments lack CSRF protection.
+To simulate a real-world environment, vulnerabilities are integrated into seemingly legitimate functional modules:
+
+- **SQL Injection (SQLi):**
+  - **Staff Login:** Standard SQLi in the authentication module.
+  - **Kitchen Profile:** SQLi in the "Kitchen Motto" update field.
+- **Stored Cross-Site Scripting (XSS):**
+  - **Community Kitchen Notes:** Malicious scripts can be stored in the public culinary tips section.
+- **OS Command Injection:**
+  - **Kitchen Server Diagnostic:** Exploitable via the "Server Heartbeat" tool (`/ping-service`).
+- **Server-Side Request Forgery (SSRF):**
+  - **Node Communication Tester:** Exploitable via the internal network diagnostic tool (`/internal-network-test`).
+- **Path Traversal / Local File Inclusion (LFI):**
+  - **Asset Explorer:** Access sensitive files via the `/asset-viewer` module.
+- **Insecure Deserialization:**
+  - **Session Monitor:** Exploitable via the staff debug token decoder (`/session-debug`).
+- **Server-Side Template Injection (SSTI):**
+  - **Personalized Greetings:** Exploitable via the guest greeting generator (`/say-hello`).
+- **Broken Access Control:**
+  - **Kitchen Secrets Vault:** Insecure access to the Senior Grill Architect vault (`/kitchen-secrets`).
+- **CVE-2025-50817 (Side-Loading):**
+  - **Ingredient Sync:** Triggered via the `/sync-ingredients` route after uploading a malicious `test.py` through the Recipe Image Uploader.
+- **Cross-Site Request Forgery (CSRF):** Profile updates and kitchen notes lack CSRF protection.
 
 ## Setup and Running
 
 ### Installation
 ```bash
-pip install -r requirements.txt --break-system-packages # Remove --break-system-packages if not needed
-python3 setup.py # Initializes the database with the new schema
+pip install -r requirements.txt
+python3 setup.py # Initializes the database with the Borgor Science schema
 ```
 
-### Running with Gunicorn
+### Running the Portal
 ```bash
-gunicorn -w 4 -b 0.0.0.0:5000 vuln_app:app
+python3 vuln_app.py
 ```
 
-### Resetting the Database
-To clean up the database after testing:
+### Testing CVE-2025-50817
+A dedicated Proof of Concept script is provided:
 ```bash
-python3 reset.py
-gunicorn -w 4 -b 0.0.0.0:5000 vuln_app:app
+python3 poc_cve_2025_50817.py
 ```
 
 ## Security Warning
-**WARNING:** This application is intentionally vulnerable and contains dangerous features (like RCE via deserialization). **NEVER** run this on a public-facing server or any untrusted network. Use only in a controlled, isolated testing environment.
+**WARNING:** This application is intentionally vulnerable and contains dangerous features (like RCE via side-loading and deserialization). **NEVER** run this on a public-facing server or any untrusted network. Use only in a controlled, isolated testing environment.
