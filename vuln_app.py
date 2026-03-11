@@ -3,6 +3,7 @@
 from flask import Flask, request, render_template, redirect, session, g, render_template_string
 import sqlite3
 import os
+import sys
 import requests
 import subprocess
 import pickle
@@ -262,9 +263,13 @@ def upload():
 
 @app.route('/reload-future')
 def reload_future():
-    # To demonstrate CVE-2025-50817, we reload the module
+    # To demonstrate CVE-2025-50817, we need to ensure 'test' is not in sys.modules
+    # so that the newly uploaded test.py is imported when future.standard_library is reloaded.
+    import sys
+    if 'test' in sys.modules:
+        del sys.modules['test']
     importlib.reload(future.standard_library)
-    return "Reloaded future.standard_library and executed any side-loading payloads (if present)."
+    return "Reloaded future.standard_library and attempted to trigger side-loading of 'test.py'."
 
 if __name__ == '__main__':
     # init_db() # We can uncomment this if we want it to init on run

