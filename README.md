@@ -9,6 +9,8 @@ To simulate a real-world environment, vulnerabilities are integrated into seemin
 - **SQL Injection (SQLi):**
   - **Staff Login:** Standard SQLi in the authentication module.
   - **Kitchen Profile:** SQLi in the "Kitchen Motto" update field.
+- **Weak JWT Session Authentication:**
+  - **Kitchen Session Cookie:** Authentication trusts a client-side JWT-like cookie (`kitchen_token`) with `alg: none`, no signature, and reversible no-key payload obfuscation.
 - **Stored Cross-Site Scripting (XSS):**
   - **Community Kitchen Notes:** Malicious scripts can be stored in the public culinary tips section.
 - **OS Command Injection:**

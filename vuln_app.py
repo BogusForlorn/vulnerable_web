@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # vuln_app.py
-from flask import Flask, request, render_template, redirect, session, g, render_template_string
+from flask import Flask, request, render_template, redirect, session, g, render_template_string, make_response
 import sqlite3
 import os
 import sys
@@ -9,6 +9,8 @@ import subprocess
 import pickle
 import base64
 import importlib
+import json
+from datetime import datetime, timedelta
 import future.standard_library
 
 # Ensure current directory is in sys.path for CVE-2025-50817 side-loading
@@ -19,6 +21,7 @@ app = Flask(__name__)
 app.secret_key = 'super-secret-key'
 
 DATABASE = 'app.db'
+AUTH_COOKIE_NAME = 'kitchen_token'
 
 
 def build_profile_token(profile_id):
@@ -38,6 +41,67 @@ def parse_profile_token(token):
         return profile_id
     except Exception:
         return None
+
+
+def weak_shift(value, shift):
+    # Intentionally weak reversible obfuscation with no key.
+    return ''.join(chr((ord(char) + shift) % 256) for char in value)
+
+
+def weak_b64_encode_json(data):
+    raw_json = json.dumps(data, separators=(',', ':'))
+    scrambled = weak_shift(raw_json, 4).encode('latin1')
+    return base64.urlsafe_b64encode(scrambled).decode().rstrip('=')
+
+
+def weak_b64_decode_json(segment):
+    padded = segment + ("=" * (-len(segment) % 4))
+    scrambled = base64.urlsafe_b64decode(padded).decode('latin1')
+    raw_json = weak_shift(scrambled, -4)
+    return json.loads(raw_json)
+
+
+def create_jwt(user_id):
+    # Intentionally vulnerable: unsigned token with no signature.
+    header = {"alg": "none", "typ": "JWT", "enc": "shift4+b64"}
+    payload = {
+        "id": user_id,
+        "exp": int((datetime.now() + timedelta(hours=1)).timestamp()),
+        "iat": int(datetime.now().timestamp()),
+    }
+    header_b64 = weak_b64_encode_json(header)
+    payload_b64 = weak_b64_encode_json(payload)
+    return f"{header_b64}.{payload_b64}."
+
+
+def decode_jwt(token):
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+        header = weak_b64_decode_json(parts[0])
+        payload = weak_b64_decode_json(parts[1])
+        if header.get('alg') != 'none':
+            return None
+        if payload.get('exp') and payload['exp'] < datetime.now().timestamp():
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+@app.before_request
+def load_current_user():
+    token = request.cookies.get(AUTH_COOKIE_NAME, '')
+    g.jwt_payload = decode_jwt(token) if token else None
+    g.current_username = g.jwt_payload.get('id') if g.jwt_payload else None
+
+
+def get_authenticated_username():
+    current_user = getattr(g, 'current_username', None)
+    if not current_user:
+        return None
+    return str(current_user)
 
 
 def get_db():
@@ -132,7 +196,9 @@ def login():
         user = c.fetchone()
         if user:
             session['username'] = username
-            return redirect('/')
+            response = make_response(redirect('/'))
+            response.set_cookie(AUTH_COOKIE_NAME, create_jwt(username))
+            return response
         else:
             error = 'Invalid credentials'
     return render_template('login.html', error=error)
@@ -177,7 +243,9 @@ def register():
                 )
                 db.commit()
                 session['username'] = username
-                return redirect('/view-burger-profile')
+                response = make_response(redirect('/view-burger-profile'))
+                response.set_cookie(AUTH_COOKIE_NAME, create_jwt(username))
+                return response
             except sqlite3.IntegrityError:
                 error = 'Username already exists'
 
@@ -186,7 +254,9 @@ def register():
 @app.route('/logout')
 def logout():
     session.pop('username', None)
-    return redirect('/')
+    response = make_response(redirect('/'))
+    response.set_cookie(AUTH_COOKIE_NAME, '', expires=0)
+    return response
 
 # Stored XSS - Legitimate-looking comment feature
 @app.route('/submit-note', methods=['POST'])
@@ -273,23 +343,23 @@ def session_debug():
 # CSRF and SQL Injection - Legitimate profile update
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
-    if 'username' not in session:
+    current_username = get_authenticated_username()
+    if not current_username:
         return redirect('/login')
     
     if request.method == 'POST':
         # Vulnerable to CSRF and SQL Injection
         new_bio = request.form.get('bio', '')
-        username = session['username']
         db = get_db()
         c = db.cursor()
-        query = f"UPDATE users SET bio = '{new_bio}' WHERE username = '{username}'"
+        query = f"UPDATE users SET bio = '{new_bio}' WHERE username = '{current_username}'"
         c.execute(query)
         db.commit()
         return f"Kitchen Profile Updated!<br><a href='/'>Back</a>"
     
     return f"""
     <h1>Kitchen Profile</h1>
-    <p>Logged in as: {session['username']}</p>
+    <p>Logged in as: {current_username}</p>
     <form method="POST">
         Update Kitchen Motto: <input type="text" name="bio">
         <button type="submit">Update</button>
@@ -300,12 +370,13 @@ def profile():
 
 @app.route('/view-burger-profile')
 def view_burger_profile():
-    if 'username' not in session:
+    current_username = get_authenticated_username()
+    if not current_username:
         return redirect('/login')
 
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT id, username FROM users WHERE username = ?", (session['username'],))
+    c.execute("SELECT id, username FROM users WHERE username = ?", (current_username,))
     current_user = c.fetchone()
 
     if not current_user:
@@ -354,7 +425,7 @@ def say_hello():
 # Broken Access Control - Legitimate-looking admin vault
 @app.route('/kitchen-secrets')
 def kitchen_secrets():
-    if session.get('username') != 'admin':
+    if get_authenticated_username() != 'admin':
         return "Access Denied. Only Senior Grill Architects can access the vault.<br><a href='/'>Back</a>", 403
     db = get_db()
     c = db.cursor()
