@@ -47,9 +47,9 @@ python3 vuln_app.py
 ### Using the Dockerfile
 ```bash
 docker build -t borgor-vuln .
-docker run --rm --name borgor-vuln -p 5000:5000 borgor-vuln
+docker run --rm --name borgor-vuln -p 80:80 borgor-vuln
 ```
-- App URL: `http://127.0.0.1:5000`
+- App URL: `http://127.0.0.1:80`
 - The image initializes `app.db` during build (`RUN python setup.py` in `Dockerfile`).
 - To refresh seeded data in a container workflow, rebuild the image:
 ```bash
