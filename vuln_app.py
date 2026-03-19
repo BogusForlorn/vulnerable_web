@@ -493,4 +493,4 @@ if __name__ == '__main__':
 
     # init_db() # We can uncomment this if we want it to init on run
 
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=80)
